@@ -64,15 +64,15 @@ class GoogleAppCurl
 	public function checkAlias($email)
 	{
 		if ($this->checkUserAlias($email)) {
-			echo "$email is a user";
+			//echo "$email is a user";
 			return true;
 		}
 		if ($this->checkGroupAlias($email)) {
-			echo "$email is a group";
+			//echo "$email is a group";
 			return true;
 		}
 
-		echo "$email is not a user or a group";
+		//echo "$email is not a user or a group";
 		return false;
 	}
 
