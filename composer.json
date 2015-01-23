@@ -1,0 +1,12 @@
+{
+    "name": "suqld/googleappcurl",
+    "type": "library",
+    "description": "Oauth2 Authenticated Curl Requests to Google",
+    "minimum-stability": "stable",
+    "license": "LGPL-3.0",
+    "autoload" : {
+        "psr-4": {
+            "SUQLD\\": "src/SUQLD/"
+        }
+    }
+}
