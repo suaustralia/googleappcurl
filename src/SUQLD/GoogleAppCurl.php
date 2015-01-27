@@ -1,5 +1,7 @@
 <?php
 
+namespace SUQLD;
+
 class GoogleAppCurl
 {
 	private $client_id;
