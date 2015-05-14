@@ -2,7 +2,7 @@
 
 namespace SUQLD;
 
-class GoogleAppCurl2
+class GoogleAppCurl
 {
     private $client_id;
     private $client_secret;
@@ -34,32 +34,62 @@ class GoogleAppCurl2
         $this->access_token = $result->access_token;
     }
 
-    public function checkUserAlias($email)
+    /**
+     * https://developers.google.com/admin-sdk/directory/v1/reference/users/list
+     * https://developers.google.com/admin-sdk/directory/v1/guides/search-users
+     * @param array $searchFields
+     * @return bool|\stdClass
+     */
+    public function findUser($searchFields = [])
     {
-        $domain = explode('@', $email)[1];
+        $url = 'https://www.googleapis.com/admin/directory/v1/users';
 
-        $url = sprintf(
-            'https://www.googleapis.com/admin/directory/v1/users?domain=%s&query=%s',
-            urlencode($domain),
-            urlencode("email=$email")
-        );
-
-        $result = json_decode($this->curlRequest($url));
-
-        // TODO check for errors
-        if (isset($result->users)) {
-            return true;
+        $query = [];
+        foreach ($searchFields as $key => $value) {
+            $query[] = $key . '=' .$value;
         }
 
-        // Email not found
-        return false;
+        $params = [
+            'customer' => 'my_customer',
+            'query' => implode(',', $query)
+        ];
+        $fullUrl = $url . '?' . http_build_query($params);
+
+        $result = json_decode($this->curlRequest($fullUrl, []));
+
+        if (!isset($result->users)) {
+            return false;
+        }
+
+        return $result->users[0];
     }
 
+    /**
+     * Checks if an email address belongs to a Google Apps account.
+     * @param string $email The email address to check.
+     * @return bool Returns true if the email belongs to a user, and false if it doesn't.
+     */
+    public function checkUserAlias($email)
+    {
+        $result = $this->findUser(['email' => $email]);
+
+        // Email not found
+        if ($result === false) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks if an email address is a Google Group.
+     * @param string $email The email address to check.
+     * @return bool Returns true if the email is a group, and false if it isn't.
+     */
     public function checkGroupAlias($email)
     {
         $result = json_decode($this->curlRequest(
-            'https://www.googleapis.com/admin/directory/v1/groups/' . urlencode("$email"),
-            []
+            'https://www.googleapis.com/admin/directory/v1/groups/' . urlencode($email)
         ));
 
         // Group not found
@@ -70,6 +100,11 @@ class GoogleAppCurl2
         return true;
     }
 
+    /**
+     * Checks if an email address belongs to a user or is a Google Group.
+     * @param string $email The email address to check.
+     * @return bool Returns true if the email belongs to a user or group, and false if it doesn't.
+     */
     public function checkAlias($email)
     {
         if ($this->checkUserAlias($email)) {
