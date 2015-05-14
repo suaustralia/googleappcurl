@@ -55,7 +55,7 @@ class GoogleAppCurl
         ];
         $fullUrl = $url . '?' . http_build_query($params);
 
-        $result = json_decode($this->curlRequest($fullUrl, []));
+        $result = json_decode($this->curlRequest($fullUrl));
 
         if (!isset($result->users)) {
             return false;
@@ -69,7 +69,7 @@ class GoogleAppCurl
      * @param string $email The email address to check.
      * @return bool Returns true if the email belongs to a user, and false if it doesn't.
      */
-    public function checkUserAlias($email)
+    public function isEmailAUser($email)
     {
         $result = $this->findUser(['email' => $email]);
 
@@ -86,7 +86,7 @@ class GoogleAppCurl
      * @param string $email The email address to check.
      * @return bool Returns true if the email is a group, and false if it isn't.
      */
-    public function checkGroupAlias($email)
+    public function isEmailAGroup($email)
     {
         $result = json_decode($this->curlRequest(
             'https://www.googleapis.com/admin/directory/v1/groups/' . urlencode($email)
@@ -105,7 +105,7 @@ class GoogleAppCurl
      * @param string $email The email address to check.
      * @return bool Returns true if the email belongs to a user or group, and false if it doesn't.
      */
-    public function checkAlias($email)
+    public function isEmailAUserOrGroup($email)
     {
         if ($this->checkUserAlias($email)) {
             return true;
