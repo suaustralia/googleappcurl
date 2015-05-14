@@ -107,10 +107,10 @@ class GoogleAppCurl
      */
     public function isEmailAUserOrGroup($email)
     {
-        if ($this->checkUserAlias($email)) {
+        if ($this->isEmailAUser($email)) {
             return true;
         }
-        if ($this->checkGroupAlias($email)) {
+        if ($this->isEmailAGroup($email)) {
             return true;
         }
 
