@@ -9,6 +9,9 @@ class GoogleAppCurl
     private $refresh_token;
     private $access_token; // This is retrieved from google via the refresh token
 
+    const URL_GROUPS = 'https://www.googleapis.com/admin/directory/v1/groups';
+    const URL_USERS = 'https://www.googleapis.com/admin/directory/v1/users';
+
     public function __construct($client_id, $client_secret, $refresh_token)
     {
         $this->client_id = $client_id;
@@ -20,17 +23,21 @@ class GoogleAppCurl
     private function refreshTokens()
     {
         // Take refresh token and get access token
-        $result = json_decode($this->curlRequest(
+        $result = $this->curlRequest(
             'https://accounts.google.com/o/oauth2/token',
             [
                 'client_id' => $this->client_id,
                 'client_secret' => $this->client_secret,
                 'refresh_token' => $this->refresh_token,
                 'grant_type' => 'refresh_token'
-            ]
-        ));
+            ],
+            false
+        );
 
-        // TODO check for errors
+        if (isset($result->error)) {
+            throw new \Exception('Couldn\'t fetch Google access token: ' . $result->error_description);
+        }
+
         $this->access_token = $result->access_token;
     }
 
@@ -55,7 +62,8 @@ class GoogleAppCurl
         ];
         $fullUrl = $url . '?' . http_build_query($params);
 
-        $result = json_decode($this->curlRequest($fullUrl));
+        $fullUrl = self::URL_USERS . '?' . http_build_query($params);
+        $result = $this->curlRequest($fullUrl);
 
         if (!isset($result->users)) {
             return false;
@@ -88,9 +96,7 @@ class GoogleAppCurl
      */
     public function isEmailAGroup($email)
     {
-        $result = json_decode($this->curlRequest(
-            'https://www.googleapis.com/admin/directory/v1/groups/' . urlencode($email)
-        ));
+        $result = $this->curlRequest(self::URL_GROUPS . '/' . urlencode($email));
 
         // Group not found
         if (isset($result->error)) {
@@ -118,24 +124,30 @@ class GoogleAppCurl
         return false;
     }
 
-    private function curlRequest($url, array $request_data = [])
+    private function curlRequest($url, array $post_fields = [], $raw_post = true)
     {
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         if ($this->access_token) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $this->access_token]);
         }
-        if ($request_data) {
-            $postfields = [];
-            foreach ($request_data as $field => $value) {
-                $postfields[] = "$field=" . urlencode($value);
+
+        if (!empty($post_fields)) {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            if ($raw_post) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_fields));
+            } else {
+                $post_fields_joined = [];
+                foreach ($post_fields as $field => $value) {
+                    $post_fields_joined[] = "$field=" . urlencode($value);
+                }
+                curl_setopt($ch, CURLOPT_POSTFIELDS, implode($post_fields_joined, '&'));
             }
-            curl_setopt($ch, CURLOPT_POSTFIELDS, implode($postfields, '&'));
         }
 
         $result = curl_exec($ch);
 
         curl_close($ch);
-        return $result;
+        return json_decode($result);
     }
 }
