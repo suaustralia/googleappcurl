@@ -35,7 +35,7 @@ class GoogleAppCurl
         );
 
         if (isset($result->error)) {
-            throw new \Exception('Couldn\'t fetch Google access token: ' . $result->error_description);
+            throw new GoogleException('Couldn\'t fetch Google access token: ' . $result->error_description);
         }
 
         $this->access_token = $result->access_token;
@@ -68,7 +68,7 @@ class GoogleAppCurl
         $result = $this->curlRequest(self::URL_USERS, $params);
 
         if (isset($result->error)) {
-            throw new \Exception('Couldn\'t create user: ' . $result->error->message, $result->error->code);
+            throw new GoogleException('Couldn\'t create user: ' . $result->error->message, $result->error->code);
         }
 
         return $result;
@@ -113,7 +113,7 @@ class GoogleAppCurl
             if ($result->error->code == 404) {
                 return false;
             } else {
-                throw new \Exception('Couldn\'t get user: ' . $result->error->message, $result->error->code);
+                throw new GoogleException('Couldn\'t get user: ' . $result->error->message, $result->error->code);
             }
         }
 
@@ -125,7 +125,7 @@ class GoogleAppCurl
         $result = $this->curlRequest(self::URL_USERS . '/' . urlencode($email), $fields);
 
         if (isset($result->error)) {
-            throw new \Exception('Couldn\'t get user: ' . $result->error->message, $result->error->code);
+            throw new GoogleException('Couldn\'t get user: ' . $result->error->message, $result->error->code);
         }
 
         return $result;
