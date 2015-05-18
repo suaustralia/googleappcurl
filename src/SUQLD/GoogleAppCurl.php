@@ -42,34 +42,93 @@ class GoogleAppCurl
     }
 
     /**
-     * https://developers.google.com/admin-sdk/directory/v1/reference/users/list
-     * https://developers.google.com/admin-sdk/directory/v1/guides/search-users
-     * @param array $searchFields
-     * @return bool|\stdClass
+     * Creates a new Google Apps user.
+     * @param string $given_name   The user's first name.
+     * @param string $family_name  The user's last name.
+     * @param string $password     The password or password hash for the account. If a hash is provided, you also need
+     *                             to set 'hashFunction' in $extra_fields.
+     * @param string $email        The user's primary email address. This email address must not be in use by another
+     *                             user, including as an alias.
+     * @param array  $extra_fields See https://developers.google.com/admin-sdk/directory/v1/reference/users/insert for
+     *                             documentation on valid fields.
+     * @throws \Exception Throws an Exception if the user couldn't be created for any reason.
+     * @return \stdClass
      */
-    public function findUser($searchFields = [])
+    public function createUser($given_name, $family_name, $password, $email, array $extra_fields = [])
     {
-        $url = 'https://www.googleapis.com/admin/directory/v1/users';
+        $params = array_merge([
+            'name' => [
+                'familyName' => $family_name,
+                'givenName' => $given_name
+            ],
+            'password' => $password,
+            'primaryEmail' => $email
+        ], $extra_fields);
 
-        $query = [];
-        foreach ($searchFields as $key => $value) {
-            $query[] = $key . '=' .$value;
+        $result = $this->curlRequest(self::URL_USERS, $params);
+
+        if (isset($result->error)) {
+            throw new \Exception('Couldn\'t create user: ' . $result->error->message, $result->error->code);
         }
 
-        $params = [
+        return $result;
+    }
+
+    public function findUsers(array $fields = [])
+    {
+        $params = array_merge([
             'customer' => 'my_customer',
-            'query' => implode(',', $query)
-        ];
-        $fullUrl = $url . '?' . http_build_query($params);
+            'maxResults' => 500
+        ], $fields);
 
         $fullUrl = self::URL_USERS . '?' . http_build_query($params);
         $result = $this->curlRequest($fullUrl);
 
-        if (!isset($result->users)) {
-            return false;
+        $users = $result->users;
+
+        while (isset($result->nextPageToken)) {
+            $params['pageToken'] = $result->nextPageToken;
+            $fullUrl = self::URL_USERS . '?' . http_build_query($params);
+            $result = $this->curlRequest($fullUrl);
+
+            $users = array_merge($users, $result->users);
         }
 
-        return $result->users[0];
+        return $users;
+    }
+
+    /**
+     * https://developers.google.com/admin-sdk/directory/v1/reference/users/get
+     * @param string $email The primary email address or alias of the user.
+     * @throws \Exception Throws an exception if an error was countered while trying to fetch the user.
+     * @return bool|\stdClass Returns a decoded JSON object representing the user, or false if the user couldn't be
+     *                        found.
+     */
+    public function getUser($email)
+    {
+        $fullUrl = self::URL_USERS . '/' . urlencode($email);
+        $result = $this->curlRequest($fullUrl);
+
+        if (isset($result->error)) {
+            if ($result->error->code == 404) {
+                return false;
+            } else {
+                throw new \Exception('Couldn\'t get user: ' . $result->error->message, $result->error->code);
+            }
+        }
+
+        return $result;
+    }
+
+    public function updateUser($email, array $fields)
+    {
+        $result = $this->curlRequest(self::URL_USERS . '/' . urlencode($email), $fields);
+
+        if (isset($result->error)) {
+            throw new \Exception('Couldn\'t get user: ' . $result->error->message, $result->error->code);
+        }
+
+        return $result;
     }
 
     /**
@@ -79,7 +138,7 @@ class GoogleAppCurl
      */
     public function isEmailAUser($email)
     {
-        $result = $this->findUser(['email' => $email]);
+        $result = $this->getUser($email);
 
         // Email not found
         if ($result === false) {
