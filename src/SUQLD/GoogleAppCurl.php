@@ -185,16 +185,19 @@ class GoogleAppCurl
 
     private function curlRequest($url, array $post_fields = [], $raw_post = true)
     {
+        $headers = [];
+
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         if ($this->access_token) {
-            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $this->access_token]);
+            $headers[] = 'Authorization: Bearer ' . $this->access_token;
         }
 
         if (!empty($post_fields)) {
             curl_setopt($ch, CURLOPT_POST, 1);
             if ($raw_post) {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($post_fields));
+                $headers[] = 'Content-Type: application/json';
             } else {
                 $post_fields_joined = [];
                 foreach ($post_fields as $field => $value) {
@@ -202,6 +205,10 @@ class GoogleAppCurl
                 }
                 curl_setopt($ch, CURLOPT_POSTFIELDS, implode($post_fields_joined, '&'));
             }
+        }
+
+        if (!empty($headers)) {
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         }
 
         $result = curl_exec($ch);
