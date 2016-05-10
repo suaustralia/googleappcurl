@@ -84,7 +84,11 @@ class GoogleAppCurl
         $fullUrl = self::URL_USERS . '?' . http_build_query($params);
         $result = $this->curlRequest($fullUrl);
 
-        $users = $result->users;
+        if (isset($result->users)) {
+            $users = $result->users;
+        } else {
+            $users = [];
+        }
 
         while (isset($result->nextPageToken)) {
             $params['pageToken'] = $result->nextPageToken;
